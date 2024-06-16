@@ -1,0 +1,39 @@
+[gd_scene load_steps=7 format=2]
+
+[ext_resource path="res://scripts/CubeTest.py" type="Script" id=1]
+
+[sub_resource type="BoxShape" id=1]
+
+[sub_resource type="CubeMesh" id=2]
+
+[sub_resource type="BoxShape" id=3]
+
+[sub_resource type="CubeMesh" id=4]
+
+[sub_resource type="Skin" id=5]
+
+[node name="Spatial" type="Spatial"]
+script = ExtResource( 1 )
+
+[node name="Cube" type="RigidBody" parent="."]
+transform = Transform( 0.0520574, 0.994034, -0.0958513, -0.304882, -0.0755794, -0.949387, -0.950967, 0.078646, 0.299128, 0, 6.11461, 0 )
+
+[node name="CollisionShape" type="CollisionShape" parent="Cube"]
+shape = SubResource( 1 )
+
+[node name="MeshInstance" type="MeshInstance" parent="Cube"]
+mesh = SubResource( 2 )
+
+[node name="Floor" type="StaticBody" parent="."]
+transform = Transform( 9.94191, 0, 0, 0, 1, 0, 0, 0, 14.3933, 0, -1, 0 )
+visible = false
+
+[node name="CollisionShape" type="CollisionShape" parent="Floor"]
+shape = SubResource( 3 )
+
+[node name="MeshInstance" type="MeshInstance" parent="Floor"]
+mesh = SubResource( 4 )
+skin = SubResource( 5 )
+
+[node name="Camera" type="Camera" parent="."]
+transform = Transform( 1, 0, 0, 0, 0.978329, 0.207058, 0, -0.207058, 0.978329, -9.53674e-07, 4.52149, 20.0792 )
