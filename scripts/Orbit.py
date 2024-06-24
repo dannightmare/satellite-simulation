@@ -31,6 +31,7 @@ def FindMaxRadius(satellite):
 @exposed
 class Orbit(Spatial):
 	
+	history_file_path = "historyNS.txt"
 	curtime = datetime.now()
 	Satellite = ResourceLoader.load('scenes/Satellite.tscn')
 	tlefilename = "starlink.tle"
@@ -38,19 +39,18 @@ class Orbit(Spatial):
 	satellitelist = []
 	special_child = Spatial.new()
 	lines_child = Spatial.new()
-	# flag = False
 	iter = 0
-	max_iter = 1000
+	# max_iter = 1000
 	
 	
 
 	def _ready(self):
 		# Settings
-		self.Stations = [self.get_node("Earth/TelHai"),
-			self.get_node("Earth/SouthPole")]
+		self.Stations = [self.get_node("Earth/SouthPole"),
+			self.get_node("Earth/NorthPole")]
 		self.LineColor = Color(0,1,0)
 		
-		
+
 		
 		self.deprecated_sats = []
 		
@@ -67,7 +67,7 @@ class Orbit(Spatial):
 			
 		self.add_child(self.special_child)
 		print("children count:", self.special_child.get_child_count())
-		Engine.time_scale = 300	# set relative time of simulation
+		Engine.time_scale = 1500	# set relative time of simulation
 		
 		lowestsat = min(self.special_child.get_children(), key=lambda x : x.get_global_translation().length())
 		print('lowestsat h:', lowestsat.get_global_translation().length())
@@ -77,6 +77,10 @@ class Orbit(Spatial):
 		self.maxD = 2 * self.maxR
 
 		# self.special_child.get_children()
+		
+		# screenshot test
+		screenshot_name = "user://screenshot_NS" + str(self.iter) + ".png"
+		self.get_viewport().get_texture().get_data().save_png(screenshot_name)
 
 
 	def _process(self, delta):
@@ -116,6 +120,7 @@ class Orbit(Spatial):
 		#nodenames[-1] == 'NewYork'
 		#nodenames[1:-1]
 
+		# draw path
 		self.lines_child.queue_free()
 		self.lines_child = Spatial.new()
 		curnode = self.Stations[0]
@@ -136,6 +141,24 @@ class Orbit(Spatial):
 		self.draw_line(curnode.get_global_translation(),
 					  nextnode.get_global_translation())
 		self.add_child(self.lines_child)
+		
+		screenshot_name = "user://screenshot_NS" + str(self.iter) + ".png"
+		
+		img = self.get_viewport().get_texture().get_data()
+		img.flip_y()
+		img.save_png(screenshot_name)
+		
+		self.append_history(path)
+
+
+	def append_history(self, path):
+		total_cost = path[-1]
+		hops = len(path[0])
+		
+		stotal_cost = str(total_cost)
+		shops = str(hops)
+		with open(self.history_file_path, 'a+') as history_file:
+			history_file.write(stotal_cost + "," + shops + f'\n')
 
 
 	def _get_line_material(self):

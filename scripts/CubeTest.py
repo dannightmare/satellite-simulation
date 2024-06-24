@@ -19,6 +19,11 @@ class CubeTest(Spatial):
 		
 		g.end()
 		self.add_child(g)
+		
+		screenshot_name = "test.png"
+		img = self.get_viewport().get_texture().get_data()
+		img.flip_y()
+		img.save_png(screenshot_name)
 
 
 	def _get_line_material(self):

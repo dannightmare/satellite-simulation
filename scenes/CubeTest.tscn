@@ -26,7 +26,6 @@ mesh = SubResource( 2 )
 
 [node name="Floor" type="StaticBody" parent="."]
 transform = Transform( 9.94191, 0, 0, 0, 1, 0, 0, 0, 14.3933, 0, -1, 0 )
-visible = false
 
 [node name="CollisionShape" type="CollisionShape" parent="Floor"]
 shape = SubResource( 3 )
@@ -37,3 +36,6 @@ skin = SubResource( 5 )
 
 [node name="Camera" type="Camera" parent="."]
 transform = Transform( 1, 0, 0, 0, 0.978329, 0.207058, 0, -0.207058, 0.978329, -9.53674e-07, 4.52149, 20.0792 )
+
+[node name="OmniLight" type="OmniLight" parent="."]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.67997, 3.23415 )
