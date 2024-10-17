@@ -41,6 +41,14 @@ mesh = SubResource( 3 )
 transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 13.3, 41.55, 46.42 )
 mesh = SubResource( 4 )
 
+[node name="NewZealand" type="MeshInstance" parent="Earth"]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -50.88, -38.05, -3.58743 )
+mesh = SubResource( 4 )
+
+[node name="Spain" type="MeshInstance" parent="Earth"]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 48.6199, 41.55, 2.05032 )
+mesh = SubResource( 4 )
+
 [node name="Camera" type="Camera" parent="."]
 transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 137.46 )
 projection = 1
@@ -50,9 +58,10 @@ near = 0.25
 far = 457.7
 
 [node name="Camera2" type="Camera" parent="."]
-transform = Transform( 0.331766, -0.255765, 0.908028, 0, 0.962545, 0.271121, -0.943362, -0.0899487, 0.31934, 79.6766, 21.6733, 16.0613 )
+transform = Transform( 0.10826, -0.269527, 0.956888, 0, 0.962545, 0.271121, -0.994123, -0.0293514, 0.104205, 84.897, 21.6733, 3.55787 )
 projection = 1
-size = 138.679
+current = true
+size = 150.0
 near = 0.25
 far = 457.7
 

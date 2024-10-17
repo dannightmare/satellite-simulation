@@ -46,8 +46,8 @@ class Orbit(Spatial):
 
 	def _ready(self):
 		# Settings
-		self.Stations = [self.get_node("Earth/SouthPole"),
-			self.get_node("Earth/NorthPole")]
+		self.Stations = [self.get_node("Earth/NewZealand"),
+			self.get_node("Earth/Spain")]
 		self.LineColor = Color(0,1,0)
 		
 
@@ -79,8 +79,8 @@ class Orbit(Spatial):
 		# self.special_child.get_children()
 		
 		# screenshot test
-		screenshot_name = "user://screenshot_NS" + str(self.iter) + ".png"
-		self.get_viewport().get_texture().get_data().save_png(screenshot_name)
+		#screenshot_name = "user://screenshot_NS" + str(self.iter) + ".png"
+		#self.get_viewport().get_texture().get_data().save_png(screenshot_name)
 
 
 	def _process(self, delta):
@@ -152,6 +152,7 @@ class Orbit(Spatial):
 
 
 	def append_history(self, path):
+		return
 		total_cost = path[-1]
 		hops = len(path[0])
 		
