@@ -4,8 +4,7 @@ from datetime import datetime, timedelta
 import sys, os
 import time
 from math import sqrt
-import igraph
-from dijkstar import Graph, find_path
+import heapq as hq
 
 sys.path.append('res://')
 
@@ -36,41 +35,39 @@ class Orbit(Spatial):
 	Satellite = ResourceLoader.load('scenes/Satellite.tscn')
 	tlefilename = "starlink.tle"
 	tlestring = ""
-	satellitelist = []
+	satellites = {}
+	deprecated_sats = []
 	special_child = Spatial.new()
 	lines_child = Spatial.new()
 	iter = 0
-	# max_iter = 1000
-	
-	
+	station1name = "Spain"
+	station2name = "NewZealand"
+
 
 	def _ready(self):
 		# Settings
-		self.Stations = [self.get_node("Earth/NewZealand"),
-			self.get_node("Earth/Spain")]
-		self.LineColor = Color(0,1,0)
-		
 
-		
-		self.deprecated_sats = []
-		
+		self.Stations = {self.station1name: self.get_node("Earth/" + self.station1name),
+						 self.station2name: self.get_node("Earth/" + self.station2name)}
+		self.LineColor = Color(0,1,0)
+
 		with open(self.tlefilename, 'r') as file:
 			self.tlestring = file.read()
-		self.satellitelist = extractxyz(self.tlestring, self.curtime)
-		print("children count:", self.special_child.get_child_count())
-		print("children:", self.special_child.get_children())
-		for sat in self.satellitelist:#[:int(len(self.satellitelist)/4)]:
-			if sat[1].length() > 67: # 63.71 + 3.3
-				self.special_child.add_child(self.spawn_object(sat[1], sat[0]))
+		self.satellites = extractxyz(self.tlestring, self.curtime)
+		#print("children count:", self.special_child.get_child_count())
+		#print("children:", self.special_child.get_children())
+		for sat in list(self.satellites.keys())[:len(self.satellites) // 1]:
+			if self.satellites[sat].length() > 67: # 63.71 + 3.3
+				self.special_child.add_child(self.spawn_object(self.satellites[sat], sat))
 			else:
-				self.deprecated_sats.append(sat[0])
-			
+				self.deprecated_sats.append(sat)
+
 		self.add_child(self.special_child)
 		print("children count:", self.special_child.get_child_count())
 		Engine.time_scale = 1500	# set relative time of simulation
 		
 		lowestsat = min(self.special_child.get_children(), key=lambda x : x.get_global_translation().length())
-		print('lowestsat h:', lowestsat.get_global_translation().length())
+		print('debug: lowestsat height:', lowestsat.get_global_translation().length())
 		# Max distance between a ground station and satellites
 		self.maxR = FindMaxRadius(lowestsat)
 		# Max distance between two satellites
@@ -85,81 +82,73 @@ class Orbit(Spatial):
 
 	def _process(self, delta):
 		self.iter += 1
-		print("debug:", self.iter)
-		print("delta:", delta)
 		
 		self.curtime += timedelta(seconds=delta)
 		
-		self.satellitelist = extractxyz(self.tlestring, self.curtime)
+		self.satellites = extractxyz(self.tlestring, self.curtime)
 		
 		#for i, sat in enumerate(self.special_child.get_children()):
-		#	sat.set_global_translation(self.satellitelist[i][1])
+		#	sat.set_global_translation(self.satellites[i][1])
+		#print("children:", self.special_child.get_children())
+		print("children count before:", self.special_child.get_child_count())
 		
-		for sat in self.satellitelist:
-			name = sat[0]
-			pos = sat[1]
-			node = self.special_child.get_node(name)
+		delete_sats = []
+		for sat in self.satellites:
+			if sat in self.deprecated_sats:
+				continue
+			pos = self.satellites[sat]
+			node = self.special_child.get_node(sat)
 			if node is None:
+				#print("Warning: Node is none with name: ", sat)
 				continue
 			if pos.length() > 67:
 				node.set_global_translation(pos)
 			else:
 				node.queue_free()
-				self.deprecated_sats.append(name)
-				
-		print("debug: sat_count:", self.special_child.get_child_count())
-		
-		# dijkstra
-		# Orbit_graph is a dijkstar Graph
-		self.Orbit_graph = Graph(undirected=True)
-		self.construct_graph()
-		path = find_path(self.Orbit_graph, str(self.Stations[0].get_name()), str(self.Stations[1].get_name()))
-		print(path)
-		nodenames = path[0]
-		#nodenames[0] == 'TelHai'
-		#nodenames[-1] == 'NewYork'
-		#nodenames[1:-1]
+				self.deprecated_sats.append(sat)
 
-		# draw path
-		self.lines_child.queue_free()
-		self.lines_child = Spatial.new()
-		curnode = self.Stations[0]
-		for name in nodenames[1:-1]:
-			nextnode = self.special_child.get_node(name)
-			if nextnode is None:
-				print(f'\t\tdebug: not found:', name)
-				for sat in self.satellitelist:
-					if sat[0] == name:
-						print(f'\t\t\tpos: {sat[1].length()}')
-						break
-			print(f'\tdebug: {nextnode}')
-			self.draw_line(curnode.get_global_translation(),
-						  nextnode.get_global_translation())
-			curnode = nextnode
+		print("children count after:", self.special_child.get_child_count())
+
+		#raise Exception("before graphing")
+		print("before graphing")
+		start_time = time.perf_counter()
+		self.Orbit_graph = dict()
+		self.construct_graph()
+		end_time = time.perf_counter()
+		print("graph constructed: took time: ", end_time - start_time)
+		#raise Exception("before astar")
+		start_time = time.perf_counter()
+		nodenames = self.a_star(self.Orbit_graph, self.station1name, self.station2name, self.distance)
+		end_time = time.perf_counter()
+		print("a_star finished: took time: ", end_time - start_time)
 		
-		nextnode = self.Stations[1]
-		self.draw_line(curnode.get_global_translation(),
-					  nextnode.get_global_translation())
+		self.lines_child.queue_free()
+		if nodenames is None:
+			print("nodenames is None")
+			return
+		#raise Exception("before drawing")
+		# draw path
+		self.lines_child = Spatial.new()
+		curpos = self.Stations[nodenames[0]].get_global_translation()
+		for name in nodenames[1:-1]:
+			if name in self.deprecated_sats:
+				print(f"{name} was deprecated, but trying to draw a line to it. FAIL")
+				break
+			nextpos = self.satellites[name]
+
+			print(f'\tdebug: {pos.length()}')
+			self.draw_line(curpos, nextpos)
+			curpos = nextpos
+		
+		nextpos = self.Stations[nodenames[-1]].get_global_translation()
+		self.draw_line(curpos, nextpos)
 		self.add_child(self.lines_child)
 		
-		screenshot_name = "user://screenshot_NS" + str(self.iter) + ".png"
+		#screenshot_name = "user://screenshot_NS" + str(self.iter) + ".png"
 		
-		img = self.get_viewport().get_texture().get_data()
-		img.flip_y()
-		img.save_png(screenshot_name)
-		
-		self.append_history(path)
-
-
-	def append_history(self, path):
-		return
-		total_cost = path[-1]
-		hops = len(path[0])
-		
-		stotal_cost = str(total_cost)
-		shops = str(hops)
-		with open(self.history_file_path, 'a+') as history_file:
-			history_file.write(stotal_cost + "," + shops + f'\n')
+		#img = self.get_viewport().get_texture().get_data()
+		#img.flip_y()
+		#img.save_png(screenshot_name)
 
 
 	def _get_line_material(self):
@@ -181,24 +170,33 @@ class Orbit(Spatial):
 
 
 	def construct_graph(self):
-		#satellites = self.special_child.get_children()
-		for i in range(len(self.satellitelist)):
-			if self.satellitelist[i][0] in self.deprecated_sats:
-				continue
-			Sat1Loc = self.satellitelist[i][1]
-			for j in range(len(self.Stations)):
-				GrStLoc = self.Stations[j].get_global_translation()
+		satellites = self.special_child.get_children()
+		for i, satnode in enumerate(satellites):
+			start_time = time.perf_counter()
+			satname = str(satnode.get_name())
+			self.Orbit_graph[satname] = {}
+			Sat1Loc = self.satellites[satname]
+			for station_name in self.Stations:
+				GrStLoc = self.Stations[station_name].get_global_translation()
 				distance = (Sat1Loc - GrStLoc).length()
 				if distance < self.maxR:
-					self.Orbit_graph.add_edge(self.satellitelist[i][0], str(self.Stations[j].get_name()), distance)
-
-			for j in range(i+1, len(self.satellitelist)):
-				if self.satellitelist[j][0] in self.deprecated_sats:
-					continue
-				Sat2Loc = self.satellitelist[j][1]
+					self.Orbit_graph[satname][station_name] = distance
+					if station_name not in self.Orbit_graph:
+						self.Orbit_graph[station_name] = {}
+					self.Orbit_graph[station_name][satname] = distance
+					
+			for j in range(i+1, len(satellites)):
+				sat2node = satellites[j]
+				sat2name = str(sat2node.get_name())
+				Sat2Loc = self.satellites[sat2name]
 				distance = (Sat1Loc - Sat2Loc).length()
 				if distance < self.maxD:
-					self.Orbit_graph.add_edge(self.satellitelist[i][0], self.satellitelist[j][0], distance)
+					self.Orbit_graph[satname ][sat2name] = distance
+					if sat2name not in self.Orbit_graph:
+						self.Orbit_graph[sat2name] = {}
+					self.Orbit_graph[sat2name][satname ] = distance
+			end_time = time.perf_counter()
+			#print(f"graph creation iteration {i} took {start_time - end_time}")
 
 
 	def spawn_object(self, position, name):
@@ -211,3 +209,59 @@ class Orbit(Spatial):
 		instance.set_name(name)
 
 		return instance
+
+
+	def distance(self, sat1name, sat2name):
+		# print(sat1name)
+		Sat1Loc = self.satellites.get(sat1name) or self.get_node("Earth/" + sat1name).get_global_translation()
+		# print(sat2name)
+		Sat2Loc = self.satellites.get(sat2name) or self.get_node("Earth/" + sat2name).get_global_translation()
+		return (Sat1Loc - Sat2Loc).length()
+
+
+	def a_star(self, graph, startname, endname, heuristic):
+		"""
+		take a graph and pick a start and end position,
+		and a heuristic function that accepts two points and returns their heuristic,
+		and returns the shortest path between the two points
+		"""
+		def reconstruct_path(came_from, current):
+			total_path = [current]
+			while current in came_from:
+				current = came_from[current]
+				total_path.append(current)
+			total_path.reverse()
+			return total_path
+
+		open = [(heuristic(startname, endname),
+				 startname)]
+		came_from = {}
+		closed = set()
+
+		g_score = {node: float('inf') for node in graph}
+		g_score[startname] = 0
+		f_score = {node: float('inf') for node in graph}
+		f_score[startname] = heuristic(startname, endname)
+
+		iters = 1
+		while open:
+
+			_, cur = hq.heappop(open)
+			if cur == endname:
+				print(f"Done, iters: {iters}")
+				return reconstruct_path(came_from, cur)
+			closed = closed | set(cur)
+			iters+=1
+			for neighbor in graph[cur]:
+				if neighbor in closed:
+					continue
+				d_neighbor = graph[cur][neighbor]
+				neighbor_cost = g_score[cur] + d_neighbor
+				if neighbor_cost < g_score[neighbor]:
+					came_from[neighbor] = cur
+					g_score[neighbor] = neighbor_cost
+					f_score[neighbor] = g_score[neighbor] + heuristic(neighbor, endname)
+					hq.heappush(open, (f_score[neighbor], neighbor))
+
+		print(f"None, iters: {iters}")
+		return None

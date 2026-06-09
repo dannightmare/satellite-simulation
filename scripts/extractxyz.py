@@ -6,7 +6,7 @@ from io import StringIO
 
 def extractxyz(inputstring, time) -> list():
 	buffer = StringIO(inputstring)
-	xyzlist = []
+	xyzdict = {}
 	now = time
 
 	while True:
@@ -32,6 +32,6 @@ def extractxyz(inputstring, time) -> list():
 		x /= 100
 		y /= 100
 		z /= 100
-		xyzlist.append((name, Vector3(x, y, z)))
+		xyzdict[name] = Vector3(x, y, z)
 
-	return xyzlist
+	return xyzdict
